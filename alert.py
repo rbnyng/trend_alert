@@ -7,7 +7,6 @@ import os
 from hull_moving_average_concavity import calculate_hma_signals
 from smoothed_heikin_ashi import calculate_smoothed_heikin_ashi
 from apply_labels import apply_labels
-import datetime
 
 # Define a function to read the last state
 def read_last_state(file_path):
@@ -55,7 +54,7 @@ if os.environ.get('SEND_TEST_EMAIL') == 'true':
     server.quit()
 
 # Fetch historical data
-data = yf.download('VTI', start='2000-01-01')
+data = yf.download('QQQ', start='2000-01-01').reset_index()
 
 data = calculate_smoothed_heikin_ashi(data)
 data = calculate_hma_signals(data)
@@ -68,7 +67,7 @@ latest_data = data.tail(1)
 current_state = latest_data['Alert']
 current_market_cond = latest_data['Market_Condition']
 
-write_last7_data(data.tail(7))
+write_last7_data(data.tail(7)[['Date', 'Open', 'High', 'Low', 'Close', 'HA_Color', 'HMA_color', 'Alert', 'Market_Condition']])
 
 if current_state != last_state:
     # change detected, send an email
