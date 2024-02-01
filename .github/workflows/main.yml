@@ -10,7 +10,7 @@ on:
         required: true
         default: 'false'
 jobs:
-  check_sma_crossover:
+  trend_alert:
     runs-on: ubuntu-latest
 
     steps:
