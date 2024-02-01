@@ -64,8 +64,8 @@ data = apply_labels(data)
 
 latest_data = data.tail(1)
 
-current_state = latest_data['Alert']
-current_market_cond = latest_data['Market_Condition']
+current_state = latest_data['Alert'].iloc[0]
+current_market_cond = latest_data['Market_Condition'].iloc[0]
 
 write_last7_data(data.tail(7)[['Date', 'Open', 'High', 'Low', 'Close', 'HA_Color', 'HMA_color', 'Alert', 'Market_Condition']])
 
