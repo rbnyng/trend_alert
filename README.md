@@ -31,6 +31,9 @@ The script is primarily designed for automatic execution through GitHub Actions.
 ```
 python alert.py
 ```
+
+Additionally, setup state.txt and last_seven_days.csv (can be empty, just needs to have these filenames) so that Github Actions will be able to push changes to these files.
+
 ### GitHub Actions Workflow
 
 The `.github/workflows/main.yml` file schedules the workflow to run at close in Eastern Time and allows manual triggering for sending a test email or checking the state.
