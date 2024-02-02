@@ -89,7 +89,7 @@ if current_state != last_state:
     message['Subject'] = 'QQQ Market Condition Change Alert'
     message['From'] = sender_email
     message['To'] = receiver_email
-    body = 'The QQQ market condition has changed.\n' + current_state + " " + current_market_cond
+    body = 'The QQQ market condition has changed.\n' + current_state
     message.attach(MIMEText(body, 'plain'))
 
     # Send the email
