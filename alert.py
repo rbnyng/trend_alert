@@ -4,9 +4,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-from hull_moving_average_concavity import calculate_hma_signals
-from smoothed_heikin_ashi import calculate_smoothed_heikin_ashi
-from apply_labels import apply_labels
+from helpers.hull_moving_average_concavity import calculate_hma_signals
+from helpers.smoothed_heikin_ashi import calculate_smoothed_heikin_ashi
+from helpers.apply_labels import apply_labels
 
 # Define a function to read the last state
 def read_last_state(file_path):
