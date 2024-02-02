@@ -18,26 +18,26 @@ def apply_labels(df):
             df_copy.loc[i, 'Market_Condition'] = 'Bear'
             # Bear market conditions
             if ha_color == 'green' and hma_color in ['green', 'dark_green']:
-                df_copy.loc[i, 'Alert'] = 'Long Alert (Bear)'
+                df_copy.loc[i, 'Alert'] = 'Long Alert'
             elif hma_color in ['dark_orange', 'red'] or ha_color == 'red':
-                df_copy.loc[i, 'Alert'] = 'Sell Alert (Bear)'
+                df_copy.loc[i, 'Alert'] = 'Sell Alert'
                 
         elif close > ema_50 and close > ema_200:
             df_copy.loc[i, 'Market_Condition'] = 'Bull'
             # Bull market conditions
             if ha_color == 'green' and hma_color in ['green', 'dark_green']:
-                df_copy.loc[i, 'Alert'] = 'Long Alert (Bull)'
+                df_copy.loc[i, 'Alert'] = 'Long Alert'
             elif hma_color == 'red' or ha_color == 'red':
-                df_copy.loc[i, 'Alert'] = 'Sell Alert (Bull)'
+                df_copy.loc[i, 'Alert'] = 'Sell Alert'
             elif hma_color == 'dark_orange':
-                df_copy.loc[i, 'Alert'] = 'Orange HMA Alert (Bull)'
+                df_copy.loc[i, 'Alert'] = 'Orange HMA Alert'
                 
         else:
             df_copy.loc[i, 'Market_Condition'] = 'Sideways'
             # Sideways market conditions
             if ha_color == 'green' and hma_color in ['green', 'dark_green']:
-                df_copy.loc[i, 'Alert'] = 'Long Alert (Sideways)'
+                df_copy.loc[i, 'Alert'] = 'Long Alert'
             elif hma_color in ['dark_orange', 'red'] or ha_color == 'red':
-                df_copy.loc[i, 'Alert'] = 'Sell Alert (Sideways)'
+                df_copy.loc[i, 'Alert'] = 'Sell Alert'
 
     return df_copy
