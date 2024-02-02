@@ -2,17 +2,45 @@ name: Trend check/alert
 
 on:
   schedule:
-    - cron: '0 22 * * 1-5'
+    - cron: '0 20,21 * * 1-5'
   workflow_dispatch:
     inputs:
       sendTestEmail:
         description: 'Send a test email (true/false)'
         required: true
         default: 'false'
+        
 jobs:
+  check-run:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check_local_time.outputs.run }}
+    steps:
+      - name: Check local time
+        id: check_local_time
+        env: 
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          echo "Trigger: ${TRIGGER}"
+          if [[ ${TRIGGER} == 'schedule' ]]; then
+            echo "Checking daylight saving time for Eastern Time zone"
+            if [ $(date --date='TZ="America/New_York" now' +%H) -eq '16' ]; then 
+              echo 'Market close time in Eastern Time zone!'
+              echo "run=True" >> "$GITHUB_OUTPUT"
+            else
+              echo "It's not just after 4:00 PM in the Eastern Time zone. Waiting for next execution..."
+              echo "run=False" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo 'Trigger is not a scheduled event, omitting time check!'
+            echo "run=True" >> "$GITHUB_OUTPUT"
+          fi
+          
   trend_alert:
     runs-on: ubuntu-latest
-
+    if: needs.check-run.outputs.run == 'True'
+    needs: check-run
+    
     steps:
     - uses: actions/checkout@v4
 
