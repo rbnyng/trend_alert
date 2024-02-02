@@ -23,10 +23,6 @@ def write_current_state(file_path, state):
 def write_last7_data(data, file_path='last_seven_days.csv'):
     data.to_csv(file_path, index=False)
 
-script_path = os.path.abspath(__file__)
-script_dir = os.path.dirname(script_path)
-os.chdir(script_dir)
-
 # Path to the state file
 state_file_path = 'state.txt'
 
