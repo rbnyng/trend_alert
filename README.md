@@ -1,12 +1,35 @@
-# Heikin-Ashi, Hull Moving Average Concavity, and EMA Trend Alert
+# SPY SMA, VIX, and VXUS/BND Momentum Trend Alert
 
-This repository contains a Python script and a GitHub Actions workflow for tracking several trend indicators of a ticker. It calculates smoothed Heikin-Ashi candles, Hull Moving Average, 50 and 200 day exponential moving averages, and sends an email notification when conditions are met, with a state-tracking feature to ensure notifications are sent only on state changes.
+This repository contains a Python script and a GitHub Actions workflow for tracking several trend indicators of a ticker. It calculates several indicators and sends an email notification when conditions are met, with a state-tracking feature to ensure notifications are sent only on state changes.
 
 ## Features
 
 - **Automated Updates**: Automated daily calculations for select trend indicators using GitHub Actions.
 - **Stateful Email Notifications**: Sends an email notification only when the state changes.
 - **Test Email Functionality**: Ability to trigger a test email to verify the setup.
+
+## Strategy
+
+### Signals
+
+The strategy is based on the following four signals:
+
+- VIX: The VIX index is less than 25.00 for the last 1 day.
+- SPY: The price of the SPY index is greater than the 200-day Simple Moving Average of SPY for the last 10 days.
+- 1-3-6-12 Momentum of VXUS: The 1-3-6-12 month momentum of the VXUS index is greater than 0.00 for the last 1 day.
+- 1-3-6-12 Momentum of BND: The 1-3-6-12 month momentum of the BND index is greater than 0.00 for the last 1 day.
+
+The 1-3-6-12 momentum is the average of 1 month return times 12, 3 month return times 4, 6 month return times 2, and 12 month return.
+Allocation Rules
+
+Based on the above signals, the strategy allocates funds as follows:
+
+- If All Signals Hold True: The strategy allocates funds to TQQQ.
+- If 3 Signals Hold True: The strategy allocates funds to QQQ.
+- If 2 Signals Hold True: The strategy allocates funds to QQQ.
+- If 1 Signal Holds True: The strategy allocates funds to GLD.
+
+Enter on the next open. Trade on the first trading day of each calendar month.
 
 ## Setup and Configuration
 
