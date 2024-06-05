@@ -4,9 +4,10 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
-from helpers.hull_moving_average_concavity import calculate_hma_signals
-from helpers.smoothed_heikin_ashi import calculate_smoothed_heikin_ashi
-from helpers.apply_labels import apply_labels
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Define a function to read the last state
 def read_last_state(file_path):
@@ -20,57 +21,75 @@ def write_current_state(file_path, state):
     with open(file_path, 'w') as file:
         file.write(state)
 
-def write_last7_data(data, file_path='last_seven_days.csv'):
-    data.to_csv(file_path, index=False)
-
-# Path to the state file
-state_file_path = 'state.txt'
-
-# Read the last state
-last_state = read_last_state(state_file_path)
-
-# Check for test email environment variable
-if os.environ.get('SEND_TEST_EMAIL') == 'true':
-    # SMTP server configuration
-    smtp_server = 'smtp.gmail.com'
-    smtp_port = 587
-    sender_email = os.environ['SENDER_EMAIL']
-    sender_password = os.environ['SENDER_PASSWORD']
-    receiver_email = os.environ['RECEIVER_EMAIL']
-
-    # Create the email message
-    message = MIMEMultipart()
-    message['Subject'] = 'Test Email'
-    message['From'] = sender_email
-    message['To'] = receiver_email
-    body = 'This is a test email.'
-    message.attach(MIMEText(body, 'plain'))
-
-    # Send the email
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(sender_email, sender_password)
-    server.sendmail(sender_email, receiver_email, message.as_string())
-    server.quit()
-
 # Fetch historical data
-data = yf.download('QQQ', start='2000-01-01').reset_index()
+def fetch_data(ticker, start_date='2010-01-01'):
+    logging.info(f"Fetching data for {ticker}")
+    return yf.download(ticker, start=start_date).reset_index()
 
-data = calculate_smoothed_heikin_ashi(data)
-data = calculate_hma_signals(data)
-data['EMA_50'] = data['Close'].ewm(span=50, adjust=False).mean()
-data['EMA_200'] = data['Close'].ewm(span=200, adjust=False).mean()
-data = apply_labels(data)
+def calculate_momentum(data):
+    periods = [21, 63, 126, 252]  # 1-3-6-12 month periods in trading days
+    weights = [12, 4, 2, 1]  # weights for the momentum calculation
 
-latest_data = data.tail(1)
+    momentum_parts = [(data['Close'] / data['Close'].shift(period) - 1) * weight
+                      for period, weight in zip(periods, weights)]
 
-current_state = latest_data['Alert'].iloc[0] + " " + latest_data['Market_Condition'].iloc[0]
+    momentum = pd.concat(momentum_parts, axis=1).sum(axis=1) / 19
+    data['Momentum'] = momentum
 
-write_last7_data(data.tail(7)[['Date', 'Open', 'High', 'Low', 'Close', 'HA_Color', 'HMA_color', 'Alert', 'Market_Condition']])
+    return data
 
-if current_state != last_state:
-    # change detected, send an email
-    # SMTP server configuration
+def calculate_signals(vix_data, spy_data, vxus_data, bnd_data):
+    vix_signal = vix_data['Close'].iloc[-1] < 25.00
+    spy_signal = (spy_data['Close'].iloc[-10:] > spy_data['SMA_200'].iloc[-10:]).all()
+    vxus_signal = vxus_data['Momentum'].iloc[-1] > 0
+    bnd_signal = bnd_data['Momentum'].iloc[-1] > 0
+
+    signals = {
+        'VIX <25 Signal': vix_signal,
+        'SPY >200 SMA Signal': spy_signal,
+        'VXUS 1-3-6-12 Signal': vxus_signal,
+        'BND 1-3-6-12 Signal': bnd_signal
+    }
+
+    return signals
+
+def determine_allocation(signals):
+    true_signals = sum(signals.values())
+    if true_signals == 4:
+        return 'TQQQ'
+    elif true_signals == 2 or true_signals == 3:
+        return 'QQQ'
+    else:
+        return 'GLD'
+
+def merge_data(vix_data, spy_data, vxus_data, bnd_data, tqqq_data, qqq_data, gld_data):
+    merged_data = spy_data[['Date', 'Close', 'SMA_200']].merge(vix_data[['Date', 'Close']], on='Date', suffixes=('', '_VIX'))
+    merged_data = merged_data.merge(vxus_data[['Date', 'Momentum']], on='Date', suffixes=('', '_VXUS'))
+    merged_data = merged_data.merge(bnd_data[['Date', 'Momentum']], on='Date', suffixes=('', '_BND'))
+    merged_data = merged_data.merge(tqqq_data[['Date', 'Close']], on='Date', suffixes=('', '_TQQQ'))
+    merged_data = merged_data.merge(qqq_data[['Date', 'Close']], on='Date', suffixes=('', '_QQQ'))
+    merged_data = merged_data.merge(gld_data[['Date', 'Close']], on='Date', suffixes=('', '_GLD'))
+    merged_data.columns = ['Date', 'SPY_Close', 'SPY_SMA_200', 'VIX_Close', 'VXUS_Momentum', 'BND_Momentum', 'TQQQ_Close', 'QQQ_Close', 'GLD_Close']
+
+    return merged_data
+
+def check_signals_and_allocate(merged_data):
+    merged_data['VIX_Signal'] = merged_data['VIX_Close'] < 25.00
+    merged_data['SPY_Signal'] = (merged_data['SPY_Close'] > merged_data['SPY_SMA_200']).rolling(window=10).apply(lambda x: x.all()).astype(bool)
+    merged_data['VXUS_Signal'] = merged_data['VXUS_Momentum'] > 0
+    merged_data['BND_Signal'] = merged_data['BND_Momentum'] > 0
+
+    merged_data['Allocation'] = merged_data.apply(
+        lambda row: determine_allocation({
+            'VIX <25 Signal': row['VIX_Signal'],
+            'SPY >200 SMA Signal': row['SPY_Signal'],
+            'VXUS 1-3-6-12 Signal': row['VXUS_Signal'],
+            'BND 1-3-6-12 Signal': row['BND_Signal']
+        }), axis=1)
+    
+    return merged_data
+
+def send_email(subject, body):
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
     sender_email = os.environ.get('SENDER_EMAIL')
@@ -79,20 +98,53 @@ if current_state != last_state:
     
     if not sender_email or not sender_password:
         raise ValueError("Email credentials are not set in environment variables.")
-        
-    # Create the email message
+    
     message = MIMEMultipart()
-    message['Subject'] = 'QQQ Market Condition Change Alert'
+    message['Subject'] = subject
     message['From'] = sender_email
     message['To'] = receiver_email
-    body = 'The QQQ market condition has changed.\n' + current_state + '\n[Check repository](https://github.com/rbnyng/trend_alert)'
     message.attach(MIMEText(body, 'plain'))
 
-    # Send the email
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(sender_email, sender_password)
-    server.sendmail(sender_email, receiver_email, message.as_string())
-    server.quit()
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, receiver_email, message.as_string())
 
-    write_current_state(state_file_path, current_state)
+def main():
+    state_file_path = 'state.txt'
+    last_state = read_last_state(state_file_path)
+
+    if os.environ.get('SEND_TEST_EMAIL') == 'true':
+        send_email('Test Email', 'This is a test email.')
+    
+    vix_data = fetch_data('^VIX')
+    spy_data = fetch_data('SPY')
+    vxus_data = fetch_data('VXUS')
+    bnd_data = fetch_data('BND')
+    tqqq_data = fetch_data('TQQQ')
+    qqq_data = fetch_data('QQQ')
+    gld_data = fetch_data('GLD')
+
+    spy_data['SMA_200'] = spy_data['Close'].rolling(window=200).mean()
+    vxus_data = calculate_momentum(vxus_data)
+    bnd_data = calculate_momentum(bnd_data)
+
+    signals = calculate_signals(vix_data, spy_data, vxus_data, bnd_data)
+    allocation = determine_allocation(signals)
+    current_state = f'{sum(signals.values())} signals hold true. Allocation: {allocation}'
+    signal_states = "\n".join([f"{signal}: {'True' if state else 'False'}" for signal, state in signals.items()])
+
+    data_merged = merge_data(vix_data, spy_data, vxus_data, bnd_data, tqqq_data, qqq_data, gld_data)
+    data_labeled = check_signals_and_allocate(data_merged)
+    data_last_seven = data_labeled.iloc[-7:]
+    
+    data_last_seven.iloc[::-1].to_csv('last_seven_days.csv')
+
+    if current_state != last_state:
+        subject = 'TQQQ Leveraged ETF Strategy Alert'
+        body = f'The market condition has changed.\n{current_state}\n\nSignal States:\n{signal_states}\n\n[Check repository](https://github.com/rbnyng/trend_alert)'
+        send_email(subject, body)
+        write_current_state(state_file_path, current_state)
+
+if __name__ == '__main__':
+    main()
