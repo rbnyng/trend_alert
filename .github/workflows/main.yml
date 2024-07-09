@@ -1,4 +1,4 @@
-name: Trend check/alert
+name: Trend check/alert HA/HMA
 
 on:
   schedule:
