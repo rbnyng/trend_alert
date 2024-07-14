@@ -1,1 +1,1 @@
-4 signals hold true. Allocation: TQQQ
+test
