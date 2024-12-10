@@ -40,7 +40,12 @@ def calculate_momentum(data):
 
 def calculate_signals(vix_data, spy_data, vxus_data, bnd_data):
     vix_signal = vix_data['Close'].iloc[-1] < 25.00
-    spy_signal = (spy_data['Close'].iloc[-10:] > spy_data['SMA_200'].iloc[-10:]).all()
+    
+    spy_close = spy_data['Close'].iloc[-10:]
+    spy_sma = spy_data['SMA_200'].iloc[-10:]
+    spy_close, spy_sma = spy_close.align(spy_sma, axis=0)
+    spy_signal = (spy_close > spy_sma).all()
+
     vxus_signal = vxus_data['Momentum'].iloc[-1] > 0
     bnd_signal = bnd_data['Momentum'].iloc[-1] > 0
 
@@ -126,7 +131,6 @@ def main():
     gld_data = fetch_data('GLD')
 
     spy_data['SMA_200'] = spy_data['Close'].rolling(window=200).mean()
-    spy_data.dropna(subset=['SMA_200'], inplace=True)
     vxus_data = calculate_momentum(vxus_data)
     bnd_data = calculate_momentum(bnd_data)
 
