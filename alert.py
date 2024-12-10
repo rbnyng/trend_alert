@@ -41,7 +41,7 @@ def calculate_momentum(data):
 def calculate_signals(vix_data, spy_data, vxus_data, bnd_data):
     vix_signal = vix_data['Close'].iloc[-1] < 25.00
 
-    spy_close, spy_sma = spy_data['Close'].align(spy_data['SMA_200'], join='inner')
+    spy_close, spy_sma = spy_data['Close'].align(spy_data['SMA_200'], join='inner', axis=0)
     spy_signal = (spy_close.iloc[-10:] > spy_sma.iloc[-10:]).all()
 
     vxus_signal = vxus_data['Momentum'].iloc[-1] > 0
