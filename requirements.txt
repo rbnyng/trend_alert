@@ -1,5 +1,5 @@
-yfinance
-pandas
+yfinance==0.2.44
+pandas==2.2.3
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
