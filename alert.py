@@ -126,6 +126,7 @@ def main():
     gld_data = fetch_data('GLD')
 
     spy_data['SMA_200'] = spy_data['Close'].rolling(window=200).mean()
+    spy_data.dropna(subset=['SMA_200'], inplace=True)
     vxus_data = calculate_momentum(vxus_data)
     bnd_data = calculate_momentum(bnd_data)
 
